@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Webhook Service — saayem.qzz.io</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+
+<!-- ── Noise overlay ──────────────────────────────────────────────────── -->
+<div class="noise" aria-hidden="true"></div>
+
+<!-- ── App shell ──────────────────────────────────────────────────────── -->
+<div class="app">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <span class="logo-icon">⬡</span>
+        <div class="logo-text">
+          <span class="logo-name">Webhook</span>
+          <span class="logo-domain">saayem.qzz.io</span>
+        </div>
+      </div>
+      <div class="status-pill" id="sseStatus">
+        <span class="status-dot"></span>
+        <span class="status-label">Connecting…</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <button class="nav-item active" data-tab="create">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+        Create
+      </button>
+      <button class="nav-item" data-tab="generate">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+        Generate URL
+      </button>
+      <button class="nav-item" data-tab="feed">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.41 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6 6l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 16.92z"/></svg>
+        Live Feed
+        <span class="badge" id="feedBadge" style="display:none">0</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="footer-stat">
+        <span class="stat-label">Clients</span>
+        <span class="stat-value" id="clientCount">—</span>
+      </div>
+      <div class="footer-stat">
+        <span class="stat-label">Fired</span>
+        <span class="stat-value" id="firedCount">0</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main">
+
+    <!-- ── Tab: Create User ──────────────────────────────────────────── -->
+    <section class="tab-panel active" id="tab-create">
+      <div class="panel-header">
+        <h1 class="panel-title">Register Username</h1>
+        <p class="panel-sub">Claim a unique username to start generating webhook URLs.</p>
+      </div>
+
+      <div class="card">
+        <form id="createUserForm" autocomplete="off">
+          <div class="field-group">
+            <label class="field-label" for="usernameInput">Username</label>
+            <div class="input-row">
+              <div class="input-wrap">
+                <span class="input-prefix">@</span>
+                <input
+                  id="usernameInput"
+                  class="input"
+                  type="text"
+                  placeholder="your_username"
+                  pattern="[a-zA-Z0-9_\-]+"
+                  minlength="2"
+                  maxlength="32"
+                  required
+                  spellcheck="false"
+                  autocomplete="off"
+                />
+              </div>
+              <button class="btn btn-primary" type="submit">
+                <span class="btn-text">Register</span>
+                <span class="btn-loader" hidden></span>
+              </button>
+            </div>
+            <p class="field-hint">2–32 chars · letters, numbers, _ and - only</p>
+          </div>
+        </form>
+
+        <div class="result-box" id="createResult" hidden>
+          <div class="result-icon success-icon">✓</div>
+          <div class="result-body">
+            <p class="result-title" id="createResultTitle"></p>
+            <p class="result-sub" id="createResultSub"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Registered users list -->
+      <div class="section-label">Registered Users</div>
+      <div class="users-grid" id="usersList">
+        <div class="empty-state">No users yet</div>
+      </div>
+    </section>
+
+    <!-- ── Tab: Generate Webhook URL ─────────────────────────────────── -->
+    <section class="tab-panel" id="tab-generate">
+      <div class="panel-header">
+        <h1 class="panel-title">Generate Webhook URL</h1>
+        <p class="panel-sub">Select your username and create a unique webhook endpoint.</p>
+      </div>
+
+      <div class="card">
+        <form id="generateForm" autocomplete="off">
+          <div class="field-group">
+            <label class="field-label" for="genUsername">Username</label>
+            <select class="input select" id="genUsername" required>
+              <option value="">— select username —</option>
+            </select>
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="genLabel">Label <span class="optional">(optional)</span></label>
+            <input
+              id="genLabel"
+              class="input"
+              type="text"
+              placeholder="e.g. github-push, payment-alert"
+              maxlength="64"
+              spellcheck="false"
+            />
+          </div>
+          <button class="btn btn-primary btn-full" type="submit">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+            <span class="btn-text">Generate Webhook URL</span>
+            <span class="btn-loader" hidden></span>
+          </button>
+        </form>
+
+        <!-- Generated URL display -->
+        <div class="url-result" id="urlResult" hidden>
+          <div class="url-result-header">
+            <span class="url-result-label">Your Webhook URL</span>
+            <span class="url-badge">LIVE</span>
+          </div>
+          <div class="url-display">
+            <code class="url-code" id="generatedUrl"></code>
+            <button class="copy-btn" id="copyUrlBtn" title="Copy URL">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            </button>
+          </div>
+          <div class="url-meta">
+            <span id="urlLabel"></span>
+            <span id="urlUsername"></span>
+          </div>
+          <div class="url-usage">
+            <p class="usage-title">How to trigger</p>
+            <div class="code-block">
+              <span class="code-comment"># POST with JSON body</span>
+              <code id="curlExample"></code>
+            </div>
+            <div class="code-block">
+              <span class="code-comment"># GET with query param</span>
+              <code id="getExample"></code>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- User's webhooks -->
+      <div id="userWebhooksSection" hidden>
+        <div class="section-label" id="userWebhooksLabel">Webhooks</div>
+        <div class="webhooks-list" id="userWebhooksList"></div>
+      </div>
+    </section>
+
+    <!-- ── Tab: Live Feed ────────────────────────────────────────────── -->
+    <section class="tab-panel" id="tab-feed">
+      <div class="panel-header">
+        <h1 class="panel-title">Live Feed</h1>
+        <p class="panel-sub">Real-time stream of all incoming webhook events.</p>
+      </div>
+
+      <div class="feed-toolbar">
+        <div class="feed-filter">
+          <select class="input select select-sm" id="feedFilter">
+            <option value="">All users</option>
+          </select>
+        </div>
+        <button class="btn btn-ghost btn-sm" id="clearFeedBtn">Clear</button>
+      </div>
+
+      <div class="feed" id="feed">
+        <div class="feed-empty" id="feedEmpty">
+          <div class="feed-empty-icon">◎</div>
+          <p>Waiting for webhooks…</p>
+          <p class="feed-empty-sub">Trigger any webhook URL to see events here in real time.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>
